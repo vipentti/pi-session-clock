@@ -6,7 +6,7 @@ Optional per-message timestamps in chat.
 ## Install
 
 ```bash
-pi install git+https://github.com/vipentti/pi-session-clock.git
+pi install git:github.com/vipentti/pi-session-clock
 ```
 
 ## What it does
