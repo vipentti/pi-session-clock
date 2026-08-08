@@ -17,6 +17,6 @@
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "*",
     "@earendil-works/pi-tui": "*",
-    "typescript": "^5"
+    "typescript": "^6"
   }
 }

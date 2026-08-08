@@ -7,7 +7,7 @@
  *   PI_SESSION_CLOCK_MESSAGE_TIMESTAMPS – "true" to decorate messages with HH:MM:SS (default: off)
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 // ── Config ──────────────────────────────────────────────────────────
 const TIME_FORMAT = process.env.PI_SESSION_CLOCK_TIME_FORMAT ?? "%H:%M";
@@ -53,12 +53,7 @@ export default function (pi: ExtensionAPI) {
   let sessionStart = 0;
   let timer: ReturnType<typeof setInterval> | null = null;
 
-  function tick(ctx: {
-    ui: {
-      theme: { fg: (c: string, t: string) => string };
-      setStatus: (k: string, t: string | undefined) => void;
-    };
-  }) {
+  function tick(ctx: ExtensionContext) {
     const now = new Date();
     const elapsed = now.getTime() - sessionStart;
     const duration = fmtDuration(elapsed, DURATION_STYLE);
