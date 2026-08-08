@@ -1,0 +1,14 @@
+{
+  "name": "pi-session-clock",
+  "version": "1.0.0",
+  "description": "Pi extension: session duration and configurable clock in the footer status bar",
+  "keywords": ["pi-package"],
+  "license": "MIT",
+  "pi": {
+    "extensions": ["./extensions"]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  }
+}
