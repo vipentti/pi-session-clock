@@ -11,89 +11,16 @@
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
-import { existsSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { fmtDuration, fmtTime } from "../src/format.js";
+import { loadJSON, projectConfigPath, resolveConfig, userConfigPath } from "../src/config.js";
 
 // ── Config ──────────────────────────────────────────────────────────
-interface Config {
-  timeFormat?: string;
-  durationStyle?: string;
-  messageTimestamps?: boolean;
-}
-
-const DEFAULTS: Config = {
-  timeFormat: "%H:%M",
-  durationStyle: "auto",
-  messageTimestamps: false,
-};
-
-function loadJSON(path: string): Config | null {
-  try {
-    if (!existsSync(path)) return null;
-    return JSON.parse(readFileSync(path, "utf8")) as Config;
-  } catch {
-    return null;
-  }
-}
-
-function userConfigPath(): string {
-  const xdg = process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config");
-  return join(xdg, "pi-session-clock.json");
-}
-
-function projectConfigPath(cwd: string): string {
-  return join(cwd, CONFIG_DIR_NAME, "pi-session-clock.json");
-}
-
 // User config (loaded once at startup, no trust needed)
 const userConfig = loadJSON(userConfigPath()) ?? {};
 
-function resolveConfig(overrides?: Config): Config {
-  const merged = { ...DEFAULTS, ...overrides, ...userConfig };
-  // Env vars override everything
-  if (process.env.PI_SESSION_CLOCK_TIME_FORMAT !== undefined) merged.timeFormat = process.env.PI_SESSION_CLOCK_TIME_FORMAT;
-  if (process.env.PI_SESSION_CLOCK_DURATION_STYLE !== undefined) merged.durationStyle = process.env.PI_SESSION_CLOCK_DURATION_STYLE;
-  if (process.env.PI_SESSION_CLOCK_MESSAGE_TIMESTAMPS !== undefined) merged.messageTimestamps = process.env.PI_SESSION_CLOCK_MESSAGE_TIMESTAMPS === "true";
-  return merged;
-}
-
 // Runtime config (mutated in session_start when project config loads)
-let cfg = resolveConfig();
+let cfg = resolveConfig(userConfig);
 // ─────────────────────────────────────────────────────────────────────
-
-function fmtTime(format: string, d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return format
-    .replace(/%Y/g, String(d.getFullYear()))
-    .replace(/%m/g, pad(d.getMonth() + 1))
-    .replace(/%d/g, pad(d.getDate()))
-    .replace(/%H/g, pad(d.getHours()))
-    .replace(/%M/g, pad(d.getMinutes()))
-    .replace(/%S/g, pad(d.getSeconds()))
-    .replace(/%a/g, d.toLocaleDateString("en", { weekday: "short" }))
-    .replace(/%b/g, d.toLocaleDateString("en", { month: "short" }));
-}
-
-function fmtDuration(ms: number, style: string): string {
-  const totalSec = Math.floor(ms / 1000);
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  switch (style) {
-    case "seconds":
-      return `${totalSec}s`;
-    case "compact":
-      return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
-    case "full":
-      return `${h}:${pad(m)}:${pad(s)}`;
-    default: // auto
-      if (h > 0) return `${h}:${pad(m)}:${pad(s)}`;
-      if (m > 0) return `${m}:${pad(s)}`;
-      return `${s}s`;
-  }
-}
 
 export default function (pi: ExtensionAPI) {
   // ── Session clock ──────────────────────────────────────────────
@@ -111,9 +38,9 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_start", (_event, ctx) => {
     // Load project config (trust-gated, lowest precedence)
     if (ctx.isProjectTrusted()) {
-      const projectConfig = loadJSON(projectConfigPath(ctx.cwd));
+      const projectConfig = loadJSON(projectConfigPath(ctx.cwd, CONFIG_DIR_NAME));
       if (projectConfig) {
-        cfg = resolveConfig(projectConfig);
+        cfg = resolveConfig(projectConfig, userConfig, process.env as Record<string, string | undefined>);
       }
     }
 

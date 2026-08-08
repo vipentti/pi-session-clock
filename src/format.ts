@@ -1,0 +1,36 @@
+/**
+ * Pure formatting functions — testable, no side effects.
+ */
+
+export function fmtTime(format: string, d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return format
+    .replace(/%Y/g, String(d.getFullYear()))
+    .replace(/%m/g, pad(d.getMonth() + 1))
+    .replace(/%d/g, pad(d.getDate()))
+    .replace(/%H/g, pad(d.getHours()))
+    .replace(/%M/g, pad(d.getMinutes()))
+    .replace(/%S/g, pad(d.getSeconds()))
+    .replace(/%a/g, d.toLocaleDateString("en", { weekday: "short" }))
+    .replace(/%b/g, d.toLocaleDateString("en", { month: "short" }));
+}
+
+export function fmtDuration(ms: number, style: string): string {
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  switch (style) {
+    case "seconds":
+      return `${totalSec}s`;
+    case "compact":
+      return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+    case "full":
+      return `${h}:${pad(m)}:${pad(s)}`;
+    default: // auto
+      if (h > 0) return `${h}:${pad(m)}:${pad(s)}`;
+      if (m > 0) return `${m}:${pad(s)}`;
+      return `${s}s`;
+  }
+}
