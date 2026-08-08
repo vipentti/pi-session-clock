@@ -2,6 +2,8 @@
  * Pure formatting functions — testable, no side effects.
  */
 
+import type { DurationStyle } from "./config.js";
+
 export function fmtTime(format: string, d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return format
@@ -15,7 +17,7 @@ export function fmtTime(format: string, d: Date): string {
     .replace(/%b/g, d.toLocaleDateString("en", { month: "short" }));
 }
 
-export function fmtDuration(ms: number, style: string): string {
+export function fmtDuration(ms: number, style: DurationStyle): string {
   const totalSec = Math.floor(ms / 1000);
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);

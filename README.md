@@ -1,7 +1,6 @@
 # pi-session-clock
 
 Pi extension: session duration + configurable clock in the footer status bar.
-Optional per-message timestamps in chat.
 
 ## Install
 
@@ -13,7 +12,6 @@ pi install git:github.com/vipentti/pi-session-clock
 
 - **Session duration** in the footer — elapsed time since session start. Auto-scales: `12s` → `3:42` → `1:02:33`.
 - **Wall clock** in the footer — configurable strftime format alongside the duration.
-- **Message timestamps** (opt-in) — decorates each user/assistant message with `HH:MM:SS` prefix.
 
 ## Config
 
@@ -30,8 +28,7 @@ All keys are optional; missing keys fall through to the next layer. Defaults sho
 ```json
 {
   "timeFormat": "%H:%M",
-  "durationStyle": "auto",
-  "messageTimestamps": false
+  "durationStyle": "auto"
 }
 ```
 
@@ -43,9 +40,6 @@ PI_SESSION_CLOCK_TIME_FORMAT="%H:%M"
 
 # Duration style: "auto" | "seconds" | "compact" | "full"
 PI_SESSION_CLOCK_DURATION_STYLE="auto"
-
-# Enable per-message timestamps in chat ("true" to enable)
-PI_SESSION_CLOCK_MESSAGE_TIMESTAMPS="true"
 ```
 
 ### Precedence example
@@ -53,7 +47,6 @@ PI_SESSION_CLOCK_MESSAGE_TIMESTAMPS="true"
 With project JSON `{"timeFormat": "%H:%M:%S"}`, user JSON `{"durationStyle": "compact"}`, and `PI_SESSION_CLOCK_TIME_FORMAT="%a %H:%M"`:
 - `timeFormat` → `"%a %H:%M"` (env wins)
 - `durationStyle` → `"compact"` (user JSON, no env set)
-- `messageTimestamps` → `false` (default, unset everywhere)
 
 ### Duration styles
 
