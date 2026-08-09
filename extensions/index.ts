@@ -11,7 +11,7 @@
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
-import { fmtDuration, fmtTime } from "../src/format.js";
+import { fmtDuration, fmtPlaceholder, fmtTime } from "../src/format.js";
 import { loadJSON, projectConfigPath, resolveConfig, userConfigPath, type ResolvedConfig, DEFAULTS } from "../src/config.js";
 
 // User config (loaded once at startup, no trust needed)
@@ -25,24 +25,30 @@ export default function (pi: ExtensionAPI) {
   let lastReceivedAt: Date | undefined;
   let timer: ReturnType<typeof setInterval> | null = null;
 
+  // One merged status key: sent part first, then received part, so the order
+  // survives Pi's alphabetical footer key sorting. Each direction shows a
+  // dash placeholder until its first message arrives.
+  function messagesStatus(ctx: ExtensionContext): string | undefined {
+    if (!cfg.showSent && !cfg.showReceived) return undefined;
+    const parts: string[] = [];
+    if (cfg.showSent) {
+      const t = lastSentAt !== undefined ? fmtTime(cfg.timeFormat, lastSentAt) : fmtPlaceholder(cfg.timeFormat);
+      parts.push(`↑${t}`);
+    }
+    if (cfg.showReceived) {
+      const t = lastReceivedAt !== undefined ? fmtTime(cfg.timeFormat, lastReceivedAt) : fmtPlaceholder(cfg.timeFormat);
+      parts.push(`↓${t}`);
+    }
+    return ctx.ui.theme.fg("dim", parts.join("  "));
+  }
+
   function tick(ctx: ExtensionContext) {
     const now = new Date();
     const elapsed = now.getTime() - sessionStart;
     const duration = fmtDuration(elapsed, cfg.durationStyle);
     const clock = fmtTime(cfg.timeFormat, now);
     ctx.ui.setStatus("session-clock", ctx.ui.theme.fg("dim", `${duration}  ${clock}`));
-    ctx.ui.setStatus(
-      "session-clock-sent",
-      cfg.showSent && lastSentAt !== undefined
-        ? ctx.ui.theme.fg("dim", `↑${fmtTime(cfg.timeFormat, lastSentAt)}`)
-        : undefined,
-    );
-    ctx.ui.setStatus(
-      "session-clock-received",
-      cfg.showReceived && lastReceivedAt !== undefined
-        ? ctx.ui.theme.fg("dim", `↓${fmtTime(cfg.timeFormat, lastReceivedAt)}`)
-        : undefined,
-    );
+    ctx.ui.setStatus("session-clock-messages", messagesStatus(ctx));
   }
 
   pi.on("session_start", (_event, ctx) => {

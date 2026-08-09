@@ -17,6 +17,23 @@ export function fmtTime(format: string, d: Date): string {
     .replace(/%b/g, d.toLocaleDateString("en", { month: "short" }));
 }
 
+/**
+ * Shape-matching placeholder for a timeFormat: each known specifier becomes
+ * dashes of the same width (%Y -> ----, %m/%d/%H/%M/%S -> --, %a/%b -> ---),
+ * literal text is kept. Used before the first message of a direction arrives.
+ */
+export function fmtPlaceholder(format: string): string {
+  return format
+    .replace(/%Y/g, "----")
+    .replace(/%m/g, "--")
+    .replace(/%d/g, "--")
+    .replace(/%H/g, "--")
+    .replace(/%M/g, "--")
+    .replace(/%S/g, "--")
+    .replace(/%a/g, "---")
+    .replace(/%b/g, "---");
+}
+
 export function fmtDuration(ms: number, style: DurationStyle): string {
   const totalSec = Math.floor(ms / 1000);
   const h = Math.floor(totalSec / 3600);

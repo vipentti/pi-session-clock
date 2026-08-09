@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULTS, resolveConfig, type RawConfig, type DurationStyle } from "../src/config.js";
+import { DEFAULTS, resolveConfig, sanitizeTimeFormat, type RawConfig, type DurationStyle } from "../src/config.js";
 
 describe("resolveConfig", () => {
   it("returns defaults when nothing provided", () => {
@@ -41,6 +41,30 @@ describe("resolveConfig", () => {
     const project: RawConfig = { timeFormat: 42 as unknown as string };
     const cfg = resolveConfig(project);
     assert.equal(cfg.timeFormat, DEFAULTS.timeFormat);
+  });
+
+  it("strips control characters and ANSI escapes from timeFormat", () => {
+    const cfg = resolveConfig({ timeFormat: "ab\r\n\x1b[31mcd\x00\x7f" });
+    assert.equal(cfg.timeFormat, "abcd");
+  });
+
+  it("leaves a normal timeFormat unchanged", () => {
+    const cfg = resolveConfig({ timeFormat: "%H:%M" });
+    assert.equal(cfg.timeFormat, "%H:%M");
+  });
+
+  it("rejects a timeFormat that sanitizes to empty", () => {
+    const cfg = resolveConfig({ timeFormat: "\x1b[31m" });
+    assert.equal(cfg.timeFormat, DEFAULTS.timeFormat);
+  });
+
+  it("sanitizes timeFormat from environment variables too", () => {
+    const cfg = resolveConfig(undefined, undefined, { PI_SESSION_CLOCK_TIME_FORMAT: "%H:\x1b[1m%M\n" });
+    assert.equal(cfg.timeFormat, "%H:%M");
+  });
+
+  it("sanitizeTimeFormat keeps printable text and specifiers", () => {
+    assert.equal(sanitizeTimeFormat("%a %d %b %H:%M"), "%a %d %b %H:%M");
   });
 
   it("invalid durationStyle in files is ignored", () => {

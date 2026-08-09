@@ -41,14 +41,26 @@ function isString(v: unknown): v is string {
   return typeof v === "string";
 }
 
+/**
+ * Strip control characters (C0 range plus DEL) and ANSI ESC sequences from a
+ * timeFormat value before it reaches the footer renderer. Valid strftime
+ * specifiers and ordinary printable text pass through untouched.
+ */
+export function sanitizeTimeFormat(v: string): string {
+  return v
+    .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "") // ANSI CSI sequences (ESC [ ... letter)
+    .replace(/[\x00-\x1f\x7f]/g, ""); // remaining control chars + DEL
+}
+
 function isBoolean(v: unknown): v is boolean {
   return typeof v === "boolean";
 }
 
 function validate(raw: RawConfig): Partial<ResolvedConfig> {
   const out: Partial<ResolvedConfig> = {};
-  if (isString(raw.timeFormat) && raw.timeFormat.length > 0) {
-    out.timeFormat = raw.timeFormat;
+  if (isString(raw.timeFormat)) {
+    const sanitized = sanitizeTimeFormat(raw.timeFormat);
+    if (sanitized.length > 0) out.timeFormat = sanitized;
   }
   if (isString(raw.durationStyle) && VALID_DURATION_STYLES.has(raw.durationStyle)) {
     out.durationStyle = raw.durationStyle as DurationStyle;
@@ -74,8 +86,9 @@ export function resolveConfig(
   const userValid = user ? validate(user) : {};
   const merged: ResolvedConfig = { ...DEFAULTS, ...projectValid, ...userValid };
 
-  if (env?.["PI_SESSION_CLOCK_TIME_FORMAT"] !== undefined && env["PI_SESSION_CLOCK_TIME_FORMAT"].length > 0) {
-    merged.timeFormat = env["PI_SESSION_CLOCK_TIME_FORMAT"];
+  if (env?.["PI_SESSION_CLOCK_TIME_FORMAT"] !== undefined) {
+    const sanitized = sanitizeTimeFormat(env["PI_SESSION_CLOCK_TIME_FORMAT"]);
+    if (sanitized.length > 0) merged.timeFormat = sanitized;
   }
   if (env?.["PI_SESSION_CLOCK_DURATION_STYLE"] !== undefined) {
     const v = env["PI_SESSION_CLOCK_DURATION_STYLE"];
