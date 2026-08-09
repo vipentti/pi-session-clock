@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { fmtDuration, fmtTime } from "../src/format.js";
+import { fmtDuration, fmtPlaceholder, fmtTime } from "../src/format.js";
 import type { DurationStyle } from "../src/config.js";
 
 function d(ms: number, style: DurationStyle) {
@@ -94,5 +94,17 @@ describe("fmtTime", () => {
   });
   it("handles literal text", () => {
     assert.equal(fmtTime("at %H:%M", date), "at 14:05");
+  });
+});
+
+describe("fmtPlaceholder", () => {
+  it("replaces specifiers with same-width dashes, keeps literals", () => {
+    assert.equal(fmtPlaceholder("%H:%M"), "--:--");
+    assert.equal(fmtPlaceholder("%Y-%m-%d"), "----------");
+    assert.equal(fmtPlaceholder("%a %d %b %H:%M:%S"), "--- -- --- --:--:--");
+    assert.equal(fmtPlaceholder("at %H:%M"), "at --:--");
+  });
+  it("passes through unknown specifiers", () => {
+    assert.equal(fmtPlaceholder("%x %Z"), "%x %Z");
   });
 });

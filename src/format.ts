@@ -4,17 +4,44 @@
 
 import type { DurationStyle } from "./config.js";
 
+type TimeToken = { format: (d: Date) => string; width: number };
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * Single source of strftime token knowledge: specifier -> formatter and
+ * placeholder width. Both fmtTime and fmtPlaceholder consume this table, so
+ * the supported specifier set lives in exactly one place.
+ */
+const TIME_TOKENS: Record<string, TimeToken> = {
+  "%Y": { format: (d) => String(d.getFullYear()), width: 4 },
+  "%m": { format: (d) => pad(d.getMonth() + 1), width: 2 },
+  "%d": { format: (d) => pad(d.getDate()), width: 2 },
+  "%H": { format: (d) => pad(d.getHours()), width: 2 },
+  "%M": { format: (d) => pad(d.getMinutes()), width: 2 },
+  "%S": { format: (d) => pad(d.getSeconds()), width: 2 },
+  "%a": { format: (d) => d.toLocaleDateString("en", { weekday: "short" }), width: 3 },
+  "%b": { format: (d) => d.toLocaleDateString("en", { month: "short" }), width: 3 },
+};
+
+// Derived from the token keys so the specifier set is not duplicated here.
+const TOKEN_RE = new RegExp(
+  "%[" + Array.from(Object.keys(TIME_TOKENS), (k) => k[1]).join("") + "]",
+  "g",
+);
+
+/** Format a Date with the supported strftime subset; unknown specifiers and literal text pass through. */
 export function fmtTime(format: string, d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return format
-    .replace(/%Y/g, String(d.getFullYear()))
-    .replace(/%m/g, pad(d.getMonth() + 1))
-    .replace(/%d/g, pad(d.getDate()))
-    .replace(/%H/g, pad(d.getHours()))
-    .replace(/%M/g, pad(d.getMinutes()))
-    .replace(/%S/g, pad(d.getSeconds()))
-    .replace(/%a/g, d.toLocaleDateString("en", { weekday: "short" }))
-    .replace(/%b/g, d.toLocaleDateString("en", { month: "short" }));
+  return format.replace(TOKEN_RE, (tok) => TIME_TOKENS[tok].format(d));
+}
+
+/**
+ * Shape-matching placeholder for a timeFormat: each known specifier becomes
+ * dashes of the same width (%Y -> ----, %m/%d/%H/%M/%S -> --, %a/%b -> ---),
+ * literal text is kept. Used before the first message of a direction arrives.
+ */
+export function fmtPlaceholder(format: string): string {
+  return format.replace(TOKEN_RE, (tok) => "-".repeat(TIME_TOKENS[tok].width));
 }
 
 export function fmtDuration(ms: number, style: DurationStyle): string {

@@ -12,7 +12,7 @@ pi install git:github.com/vipentti/pi-session-clock
 
 - **Session duration** in the footer — elapsed time since session start. Auto-scales: `12s` → `3:42` → `1:02:33`.
 - **Wall clock** in the footer - configurable strftime format alongside the duration.
-- **Message times** in separate footer statuses - `↑` for last captain message sent and `↓` for last agent message received.
+- **Message times** in one footer status - `↑` for last captain message sent and `↓` for last agent message received. Both arrows are always visible (`↑14:02  ↓14:05`), showing a dash placeholder (`↑--:--`) until each direction has its first message.
 
 ## Config
 
@@ -49,7 +49,7 @@ PI_SESSION_CLOCK_SHOW_SENT="true"
 PI_SESSION_CLOCK_SHOW_RECEIVED="true"
 ```
 
-Set `showSent` or `showReceived` to `false`, or set its environment variable to `false`, to hide one message status. Missing keys keep message statuses enabled.
+Set `showSent` or `showReceived` to `false`, or set its environment variable to `false`, to hide that direction's arrow (both `false` hides the message status entirely). Missing keys keep message statuses enabled.
 
 ### Precedence example
 

@@ -41,13 +41,22 @@ function isString(v: unknown): v is string {
   return typeof v === "string";
 }
 
+/**
+ * A timeFormat containing any C0 control char (\x00-\x1F) or DEL (\x7F) is
+ * unsafe: terminal escape sequences originate in that range. Such values are
+ * rejected like any other invalid config, never partially stripped or rewritten.
+ */
+function isSafeTimeFormat(v: string): boolean {
+  return !/[\x00-\x1f\x7f]/.test(v);
+}
+
 function isBoolean(v: unknown): v is boolean {
   return typeof v === "boolean";
 }
 
 function validate(raw: RawConfig): Partial<ResolvedConfig> {
   const out: Partial<ResolvedConfig> = {};
-  if (isString(raw.timeFormat) && raw.timeFormat.length > 0) {
+  if (isString(raw.timeFormat) && isSafeTimeFormat(raw.timeFormat) && raw.timeFormat.length > 0) {
     out.timeFormat = raw.timeFormat;
   }
   if (isString(raw.durationStyle) && VALID_DURATION_STYLES.has(raw.durationStyle)) {
@@ -74,8 +83,11 @@ export function resolveConfig(
   const userValid = user ? validate(user) : {};
   const merged: ResolvedConfig = { ...DEFAULTS, ...projectValid, ...userValid };
 
-  if (env?.["PI_SESSION_CLOCK_TIME_FORMAT"] !== undefined && env["PI_SESSION_CLOCK_TIME_FORMAT"].length > 0) {
-    merged.timeFormat = env["PI_SESSION_CLOCK_TIME_FORMAT"];
+  if (env?.["PI_SESSION_CLOCK_TIME_FORMAT"] !== undefined) {
+    const v = env["PI_SESSION_CLOCK_TIME_FORMAT"];
+    if (v.length > 0 && isSafeTimeFormat(v)) {
+      merged.timeFormat = v;
+    }
   }
   if (env?.["PI_SESSION_CLOCK_DURATION_STYLE"] !== undefined) {
     const v = env["PI_SESSION_CLOCK_DURATION_STYLE"];

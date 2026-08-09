@@ -43,6 +43,32 @@ describe("resolveConfig", () => {
     assert.equal(cfg.timeFormat, DEFAULTS.timeFormat);
   });
 
+  it("rejects timeFormat values containing control characters", () => {
+    const cfg = resolveConfig({ timeFormat: "ab\r\n\x1b[31mcd\x00\x7f" });
+    assert.equal(cfg.timeFormat, DEFAULTS.timeFormat);
+  });
+
+  it("leaves a normal timeFormat unchanged", () => {
+    const cfg = resolveConfig({ timeFormat: "%H:%M" });
+    assert.equal(cfg.timeFormat, "%H:%M");
+  });
+
+  it("rejects a pure-escape timeFormat", () => {
+    const cfg = resolveConfig({ timeFormat: "\x1b[31m" });
+    assert.equal(cfg.timeFormat, DEFAULTS.timeFormat);
+  });
+
+  it("ignores an env timeFormat containing control characters, keeping the merged value", () => {
+    const project: RawConfig = { timeFormat: "%H:%M" };
+    const cfg = resolveConfig(project, undefined, { PI_SESSION_CLOCK_TIME_FORMAT: "%H:\x1b[1m%M\n" });
+    assert.equal(cfg.timeFormat, "%H:%M");
+  });
+
+  it("ignores an env timeFormat containing control characters when no lower layer sets one", () => {
+    const cfg = resolveConfig(undefined, undefined, { PI_SESSION_CLOCK_TIME_FORMAT: "%H:\x1b[1m%M\n" });
+    assert.equal(cfg.timeFormat, DEFAULTS.timeFormat);
+  });
+
   it("invalid durationStyle in files is ignored", () => {
     const project: RawConfig = { durationStyle: "bogus" };
     const cfg = resolveConfig(project);
