@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { fmtDuration, fmtTime } from "../src/format.js";
+import { fmtDuration, fmtTime, fmtTimestamp } from "../src/format.js";
 import type { DurationStyle } from "../src/config.js";
 
 function d(ms: number, style: DurationStyle) {
@@ -94,5 +94,12 @@ describe("fmtTime", () => {
   });
   it("handles literal text", () => {
     assert.equal(fmtTime("at %H:%M", date), "at 14:05");
+  });
+});
+
+describe("fmtTimestamp", () => {
+  it("formats message timestamps with configured time format", () => {
+    const timestamp = new Date(2025, 3, 7, 14, 5, 9).getTime();
+    assert.equal(fmtTimestamp("%Y-%m-%d %H:%M:%S", timestamp), "2025-04-07 14:05:09");
   });
 });

@@ -17,6 +17,10 @@ export function fmtTime(format: string, d: Date): string {
     .replace(/%b/g, d.toLocaleDateString("en", { month: "short" }));
 }
 
+export function fmtTimestamp(format: string, timestamp: number): string {
+  return fmtTime(format, new Date(timestamp));
+}
+
 export function fmtDuration(ms: number, style: DurationStyle): string {
   const totalSec = Math.floor(ms / 1000);
   const h = Math.floor(totalSec / 3600);
