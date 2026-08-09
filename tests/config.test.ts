@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULTS, resolveConfig, sanitizeTimeFormat, type RawConfig, type DurationStyle } from "../src/config.js";
+import { DEFAULTS, resolveConfig, type RawConfig, type DurationStyle } from "../src/config.js";
 
 describe("resolveConfig", () => {
   it("returns defaults when nothing provided", () => {
@@ -43,9 +43,9 @@ describe("resolveConfig", () => {
     assert.equal(cfg.timeFormat, DEFAULTS.timeFormat);
   });
 
-  it("strips control characters and ANSI escapes from timeFormat", () => {
+  it("rejects timeFormat values containing control characters", () => {
     const cfg = resolveConfig({ timeFormat: "ab\r\n\x1b[31mcd\x00\x7f" });
-    assert.equal(cfg.timeFormat, "abcd");
+    assert.equal(cfg.timeFormat, DEFAULTS.timeFormat);
   });
 
   it("leaves a normal timeFormat unchanged", () => {
@@ -53,18 +53,20 @@ describe("resolveConfig", () => {
     assert.equal(cfg.timeFormat, "%H:%M");
   });
 
-  it("rejects a timeFormat that sanitizes to empty", () => {
+  it("rejects a pure-escape timeFormat", () => {
     const cfg = resolveConfig({ timeFormat: "\x1b[31m" });
     assert.equal(cfg.timeFormat, DEFAULTS.timeFormat);
   });
 
-  it("sanitizes timeFormat from environment variables too", () => {
-    const cfg = resolveConfig(undefined, undefined, { PI_SESSION_CLOCK_TIME_FORMAT: "%H:\x1b[1m%M\n" });
+  it("ignores an env timeFormat containing control characters, keeping the merged value", () => {
+    const project: RawConfig = { timeFormat: "%H:%M" };
+    const cfg = resolveConfig(project, undefined, { PI_SESSION_CLOCK_TIME_FORMAT: "%H:\x1b[1m%M\n" });
     assert.equal(cfg.timeFormat, "%H:%M");
   });
 
-  it("sanitizeTimeFormat keeps printable text and specifiers", () => {
-    assert.equal(sanitizeTimeFormat("%a %d %b %H:%M"), "%a %d %b %H:%M");
+  it("ignores an env timeFormat containing control characters when no lower layer sets one", () => {
+    const cfg = resolveConfig(undefined, undefined, { PI_SESSION_CLOCK_TIME_FORMAT: "%H:\x1b[1m%M\n" });
+    assert.equal(cfg.timeFormat, DEFAULTS.timeFormat);
   });
 
   it("invalid durationStyle in files is ignored", () => {

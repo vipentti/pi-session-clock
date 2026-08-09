@@ -42,14 +42,12 @@ function isString(v: unknown): v is string {
 }
 
 /**
- * Strip control characters (C0 range plus DEL) and ANSI ESC sequences from a
- * timeFormat value before it reaches the footer renderer. Valid strftime
- * specifiers and ordinary printable text pass through untouched.
+ * A timeFormat containing any C0 control char (\x00-\x1F) or DEL (\x7F) is
+ * unsafe: terminal escape sequences originate in that range. Such values are
+ * rejected like any other invalid config, never partially stripped or rewritten.
  */
-export function sanitizeTimeFormat(v: string): string {
-  return v
-    .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "") // ANSI CSI sequences (ESC [ ... letter)
-    .replace(/[\x00-\x1f\x7f]/g, ""); // remaining control chars + DEL
+function isSafeTimeFormat(v: string): boolean {
+  return !/[\x00-\x1f\x7f]/.test(v);
 }
 
 function isBoolean(v: unknown): v is boolean {
@@ -58,9 +56,8 @@ function isBoolean(v: unknown): v is boolean {
 
 function validate(raw: RawConfig): Partial<ResolvedConfig> {
   const out: Partial<ResolvedConfig> = {};
-  if (isString(raw.timeFormat)) {
-    const sanitized = sanitizeTimeFormat(raw.timeFormat);
-    if (sanitized.length > 0) out.timeFormat = sanitized;
+  if (isString(raw.timeFormat) && isSafeTimeFormat(raw.timeFormat) && raw.timeFormat.length > 0) {
+    out.timeFormat = raw.timeFormat;
   }
   if (isString(raw.durationStyle) && VALID_DURATION_STYLES.has(raw.durationStyle)) {
     out.durationStyle = raw.durationStyle as DurationStyle;
@@ -87,8 +84,10 @@ export function resolveConfig(
   const merged: ResolvedConfig = { ...DEFAULTS, ...projectValid, ...userValid };
 
   if (env?.["PI_SESSION_CLOCK_TIME_FORMAT"] !== undefined) {
-    const sanitized = sanitizeTimeFormat(env["PI_SESSION_CLOCK_TIME_FORMAT"]);
-    if (sanitized.length > 0) merged.timeFormat = sanitized;
+    const v = env["PI_SESSION_CLOCK_TIME_FORMAT"];
+    if (v.length > 0 && isSafeTimeFormat(v)) {
+      merged.timeFormat = v;
+    }
   }
   if (env?.["PI_SESSION_CLOCK_DURATION_STYLE"] !== undefined) {
     const v = env["PI_SESSION_CLOCK_DURATION_STYLE"];
