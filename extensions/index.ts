@@ -10,7 +10,8 @@
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { fmtDuration, fmtTime, fmtTimestamp } from "../src/format.js";
+import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
+import { fmtDuration, fmtTime } from "../src/format.js";
 import { loadJSON, projectConfigPath, resolveConfig, userConfigPath, type ResolvedConfig, DEFAULTS } from "../src/config.js";
 
 // User config (loaded once at startup, no trust needed)
@@ -20,8 +21,8 @@ export default function (pi: ExtensionAPI) {
   // Effective config — always recomputed unconditionally at session_start.
   let cfg: ResolvedConfig = DEFAULTS;
   let sessionStart = 0;
-  let lastSent: number | undefined;
-  let lastReceived: number | undefined;
+  let lastSentAt: Date | undefined;
+  let lastReceivedAt: Date | undefined;
   let timer: ReturnType<typeof setInterval> | null = null;
 
   function tick(ctx: ExtensionContext) {
@@ -32,14 +33,14 @@ export default function (pi: ExtensionAPI) {
     ctx.ui.setStatus("session-clock", ctx.ui.theme.fg("dim", `${duration}  ${clock}`));
     ctx.ui.setStatus(
       "session-clock-sent",
-      cfg.showSent && lastSent !== undefined
-        ? ctx.ui.theme.fg("dim", `↑${fmtTimestamp(cfg.timeFormat, lastSent)}`)
+      cfg.showSent && lastSentAt !== undefined
+        ? ctx.ui.theme.fg("dim", `↑${fmtTime(cfg.timeFormat, lastSentAt)}`)
         : undefined,
     );
     ctx.ui.setStatus(
       "session-clock-received",
-      cfg.showReceived && lastReceived !== undefined
-        ? ctx.ui.theme.fg("dim", `↓${fmtTimestamp(cfg.timeFormat, lastReceived)}`)
+      cfg.showReceived && lastReceivedAt !== undefined
+        ? ctx.ui.theme.fg("dim", `↓${fmtTime(cfg.timeFormat, lastReceivedAt)}`)
         : undefined,
     );
   }
@@ -47,13 +48,13 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_start", (_event, ctx) => {
     // Unconditionally recompute config — prevents project-config leaks across sessions.
     const projectConfig = ctx.isProjectTrusted()
-      ? (loadJSON(projectConfigPath(ctx.cwd)) ?? {})
+      ? (loadJSON(projectConfigPath(ctx.cwd, CONFIG_DIR_NAME)) ?? {})
       : {};
     cfg = resolveConfig(projectConfig, userConfig, process.env as Record<string, string | undefined>);
 
     sessionStart = Date.now();
-    lastSent = undefined;
-    lastReceived = undefined;
+    lastSentAt = undefined;
+    lastReceivedAt = undefined;
     if (timer !== null) clearInterval(timer);
     tick(ctx);
     timer = setInterval(() => tick(ctx), 1000);
@@ -61,13 +62,13 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("message_start", (event, ctx) => {
     if (event.message.role !== "user") return;
-    lastSent = event.message.timestamp;
+    lastSentAt = new Date(event.message.timestamp);
     tick(ctx);
   });
 
   pi.on("message_end", (event, ctx) => {
     if (event.message.role !== "assistant") return;
-    lastReceived = event.message.timestamp;
+    lastReceivedAt = new Date();
     tick(ctx);
   });
 

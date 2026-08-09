@@ -28,20 +28,43 @@ function setup() {
   return { handlers, statuses, ctx };
 }
 
+function withNow<T>(now: Date, fn: () => T): T {
+  const RealDate = globalThis.Date;
+  class MockDate extends RealDate {
+    constructor(value?: string | number | Date) {
+      super(value === undefined ? now.getTime() : value);
+    }
+
+    static now() {
+      return now.getTime();
+    }
+  }
+  globalThis.Date = MockDate as DateConstructor;
+  try {
+    return fn();
+  } finally {
+    globalThis.Date = RealDate;
+  }
+}
+
 describe("message footer status handlers", () => {
-  it("tracks sent and received timestamps without streaming redraw corruption", () => {
+  it("tracks sent time and receive completion time", () => {
     const { handlers, statuses, ctx } = setup();
     try {
       const sent = new Date(2025, 3, 7, 14, 2, 9);
-      const received = new Date(2025, 3, 7, 14, 5, 9);
+      const streamStarted = new Date(2025, 3, 7, 14, 4, 9);
+      const completion = new Date(2025, 3, 7, 14, 5, 9);
 
       handlers.get("message_start")!({ message: { role: "user", timestamp: sent.getTime() } }, ctx);
       assert.equal(statuses.get("session-clock-sent"), `↑${fmtTime("%H:%M", sent)}`);
       assert.equal(statuses.get("session-clock-received"), undefined);
 
-      handlers.get("message_end")!({ message: { role: "assistant", timestamp: received.getTime() } }, ctx);
+      withNow(completion, () => {
+        handlers.get("message_end")!({ message: { role: "assistant", timestamp: streamStarted.getTime() } }, ctx);
+      });
       assert.equal(statuses.get("session-clock-sent"), `↑${fmtTime("%H:%M", sent)}`);
-      assert.equal(statuses.get("session-clock-received"), `↓${fmtTime("%H:%M", received)}`);
+      assert.equal(statuses.get("session-clock-received"), `↓${fmtTime("%H:%M", completion)}`);
+      assert.notEqual(statuses.get("session-clock-received"), `↓${fmtTime("%H:%M", streamStarted)}`);
     } finally {
       handlers.get("session_shutdown")!({}, ctx);
     }
