@@ -12,7 +12,7 @@ pi install git:github.com/vipentti/pi-session-clock
 
 - **Session duration** in the footer — elapsed time since session start. Auto-scales: `12s` → `3:42` → `1:02:33`.
 - **Wall clock** in the footer - configurable strftime format alongside the duration.
-- **Message times** in one footer status - `↑` for last captain message sent and `↓` for last agent message received. Both arrows are always visible (`↑14:02  ↓14:05`), showing a dash placeholder (`↑--:--`) until each direction has its first message.
+- **Message times** in one footer status - `↑` for the last message you sent and `↓` for the last message received. Both arrows are always visible (`↑14:02  ↓14:05`), showing a dash placeholder (`↑--:--`) until each direction has its first message.
 
 ## Config
 
