@@ -1,5 +1,6 @@
 {
   "name": "pi-session-clock",
+  "type": "module",
   "version": "1.0.0",
   "description": "Pi extension: session duration and configurable clock in the footer status bar",
   "keywords": ["pi-package"],

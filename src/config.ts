@@ -14,17 +14,23 @@ export type DurationStyle = "auto" | "seconds" | "compact" | "full";
 export interface RawConfig {
   timeFormat?: unknown;
   durationStyle?: unknown;
+  showSent?: unknown;
+  showReceived?: unknown;
 }
 
 /** Fully resolved, validated config — no optional fields, no unknowns. */
 export interface ResolvedConfig {
   timeFormat: string;
   durationStyle: DurationStyle;
+  showSent: boolean;
+  showReceived: boolean;
 }
 
 export const DEFAULTS: ResolvedConfig = {
   timeFormat: "%H:%M",
   durationStyle: "auto",
+  showSent: true,
+  showReceived: true,
 };
 
 const VALID_DURATION_STYLES = new Set<string>(["auto", "seconds", "compact", "full"]);
@@ -35,6 +41,10 @@ function isString(v: unknown): v is string {
   return typeof v === "string";
 }
 
+function isBoolean(v: unknown): v is boolean {
+  return typeof v === "boolean";
+}
+
 function validate(raw: RawConfig): Partial<ResolvedConfig> {
   const out: Partial<ResolvedConfig> = {};
   if (isString(raw.timeFormat) && raw.timeFormat.length > 0) {
@@ -43,6 +53,8 @@ function validate(raw: RawConfig): Partial<ResolvedConfig> {
   if (isString(raw.durationStyle) && VALID_DURATION_STYLES.has(raw.durationStyle)) {
     out.durationStyle = raw.durationStyle as DurationStyle;
   }
+  if (isBoolean(raw.showSent)) out.showSent = raw.showSent;
+  if (isBoolean(raw.showReceived)) out.showReceived = raw.showReceived;
   return out;
 }
 
@@ -70,6 +82,12 @@ export function resolveConfig(
     if (VALID_DURATION_STYLES.has(v)) {
       merged.durationStyle = v as DurationStyle;
     }
+  }
+  if (env?.["PI_SESSION_CLOCK_SHOW_SENT"] === "true" || env?.["PI_SESSION_CLOCK_SHOW_SENT"] === "false") {
+    merged.showSent = env["PI_SESSION_CLOCK_SHOW_SENT"] === "true";
+  }
+  if (env?.["PI_SESSION_CLOCK_SHOW_RECEIVED"] === "true" || env?.["PI_SESSION_CLOCK_SHOW_RECEIVED"] === "false") {
+    merged.showReceived = env["PI_SESSION_CLOCK_SHOW_RECEIVED"] === "true";
   }
   return merged;
 }

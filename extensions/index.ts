@@ -1,12 +1,12 @@
 /**
- * pi-session-clock — Session duration + wall clock in the Pi footer.
+ * pi-session-clock - Session duration + wall clock in the Pi footer.
  *
  * Config precedence (highest first):
  *   1. Environment variables (PI_SESSION_CLOCK_*)
  *   2. User-level JSON: $XDG_CONFIG_HOME/pi-session-clock.json (~/.config/pi-session-clock.json)
  *   3. Project-level JSON: <cwd>/.pi/pi-session-clock.json (trust-gated)
  *
- * JSON keys: timeFormat, durationStyle
+ * JSON keys: timeFormat, durationStyle, showSent, showReceived
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -21,6 +21,8 @@ export default function (pi: ExtensionAPI) {
   // Effective config — always recomputed unconditionally at session_start.
   let cfg: ResolvedConfig = DEFAULTS;
   let sessionStart = 0;
+  let lastSentAt: Date | undefined;
+  let lastReceivedAt: Date | undefined;
   let timer: ReturnType<typeof setInterval> | null = null;
 
   function tick(ctx: ExtensionContext) {
@@ -29,6 +31,18 @@ export default function (pi: ExtensionAPI) {
     const duration = fmtDuration(elapsed, cfg.durationStyle);
     const clock = fmtTime(cfg.timeFormat, now);
     ctx.ui.setStatus("session-clock", ctx.ui.theme.fg("dim", `${duration}  ${clock}`));
+    ctx.ui.setStatus(
+      "session-clock-sent",
+      cfg.showSent && lastSentAt !== undefined
+        ? ctx.ui.theme.fg("dim", `↑${fmtTime(cfg.timeFormat, lastSentAt)}`)
+        : undefined,
+    );
+    ctx.ui.setStatus(
+      "session-clock-received",
+      cfg.showReceived && lastReceivedAt !== undefined
+        ? ctx.ui.theme.fg("dim", `↓${fmtTime(cfg.timeFormat, lastReceivedAt)}`)
+        : undefined,
+    );
   }
 
   pi.on("session_start", (_event, ctx) => {
@@ -39,8 +53,23 @@ export default function (pi: ExtensionAPI) {
     cfg = resolveConfig(projectConfig, userConfig, process.env as Record<string, string | undefined>);
 
     sessionStart = Date.now();
+    lastSentAt = undefined;
+    lastReceivedAt = undefined;
+    if (timer !== null) clearInterval(timer);
     tick(ctx);
     timer = setInterval(() => tick(ctx), 1000);
+  });
+
+  pi.on("message_start", (event, ctx) => {
+    if (event.message.role !== "user") return;
+    lastSentAt = new Date(event.message.timestamp);
+    tick(ctx);
+  });
+
+  pi.on("message_end", (event, ctx) => {
+    if (event.message.role !== "assistant") return;
+    lastReceivedAt = new Date();
+    tick(ctx);
   });
 
   pi.on("session_shutdown", () => {

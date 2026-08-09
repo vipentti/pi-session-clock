@@ -5,6 +5,8 @@ import { DEFAULTS, resolveConfig, type RawConfig, type DurationStyle } from "../
 describe("resolveConfig", () => {
   it("returns defaults when nothing provided", () => {
     assert.deepEqual(resolveConfig(), DEFAULTS);
+    assert.equal(DEFAULTS.showSent, true);
+    assert.equal(DEFAULTS.showReceived, true);
   });
 
   it("project config fills in over defaults", () => {
@@ -59,6 +61,32 @@ describe("resolveConfig", () => {
       PI_SESSION_CLOCK_DURATION_STYLE: "full",
     });
     assert.equal(cfg.durationStyle, "full" satisfies DurationStyle);
+  });
+
+  it("message statuses resolve through project, user, and env layers", () => {
+    const cfg = resolveConfig(
+      { showSent: false, showReceived: true },
+      { showSent: true },
+      { PI_SESSION_CLOCK_SHOW_SENT: "false", PI_SESSION_CLOCK_SHOW_RECEIVED: "false" },
+    );
+    assert.equal(cfg.showSent, false);
+    assert.equal(cfg.showReceived, false);
+  });
+
+  it("message statuses can be disabled individually", () => {
+    const cfg = resolveConfig({ showSent: false });
+    assert.equal(cfg.showSent, false);
+    assert.equal(cfg.showReceived, true);
+  });
+
+  it("invalid message status values are ignored", () => {
+    const cfg = resolveConfig(
+      { showSent: "false", showReceived: 0 },
+      undefined,
+      { PI_SESSION_CLOCK_SHOW_SENT: "no", PI_SESSION_CLOCK_SHOW_RECEIVED: "1" },
+    );
+    assert.equal(cfg.showSent, DEFAULTS.showSent);
+    assert.equal(cfg.showReceived, DEFAULTS.showReceived);
   });
 
   it("missing env vars don't override lower layers", () => {
