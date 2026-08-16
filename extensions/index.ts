@@ -25,6 +25,28 @@ export default function (pi: ExtensionAPI) {
   let lastReceivedAt: Date | undefined;
   let timer: ReturnType<typeof setInterval> | null = null;
 
+  // Per-prompt agent-processing timer + tool-call counter (always-on, section 6).
+  // Measures from before_agent_start to the idle agent_settled (submission/expansion/
+  // compaction before the loop is excluded). promptStartMs is wall-time at
+  // before_agent_start; undefined until the first prompt. promptSettledAt is the
+  // frozen wall-time at the idle agent_settled; undefined while the prompt is in
+  // flight (including continuations that keep isIdle()==false). promptToolCount
+  // counts tool_execution_start events between before_agent_start and the idle
+  // agent_settled so a blocking tool_call handler before us cannot hide attempts.
+  // The single session tick repaints the prompt band while active; execution and
+  // settle handlers repaint immediately.
+  let promptStartMs: number | undefined;
+  let promptSettledAt: number | undefined;
+  let promptToolCount = 0;
+
+  function promptStatus(ctx: ExtensionContext): string | undefined {
+    if (promptStartMs === undefined) return undefined;
+    const end = promptSettledAt ?? Date.now();
+    const delta = end - promptStartMs;
+    const elapsed = fmtDuration(delta, cfg.durationStyle);
+    return ctx.ui.theme.fg("dim", `⏱ ${elapsed}  🔧${promptToolCount}`);
+  }
+
   // One merged status key: sent part first, then received part, so the order
   // survives Pi's alphabetical footer key sorting. Each direction shows a
   // dash placeholder until its first message arrives.
@@ -49,6 +71,7 @@ export default function (pi: ExtensionAPI) {
     const clock = fmtTime(cfg.timeFormat, now);
     ctx.ui.setStatus("session-clock", ctx.ui.theme.fg("dim", `${duration}  ${clock}`));
     ctx.ui.setStatus("session-clock-messages", messagesStatus(ctx));
+    ctx.ui.setStatus("session-clock-prompt", promptStatus(ctx));
   }
 
   pi.on("session_start", (_event, ctx) => {
@@ -64,6 +87,12 @@ export default function (pi: ExtensionAPI) {
     if (timer !== null) clearInterval(timer);
     tick(ctx);
     timer = setInterval(() => tick(ctx), 1000);
+
+    // Reset prompt timer: frozen value does not survive session boundary.
+    promptStartMs = undefined;
+    promptSettledAt = undefined;
+    promptToolCount = 0;
+    ctx.ui.setStatus("session-clock-prompt", undefined);
   });
 
   pi.on("message_start", (event, ctx) => {
@@ -76,6 +105,28 @@ export default function (pi: ExtensionAPI) {
     if (event.message.role !== "assistant") return;
     lastReceivedAt = new Date();
     tick(ctx);
+  });
+
+  pi.on("before_agent_start", (_event, ctx) => {
+    promptStartMs = Date.now();
+    promptSettledAt = undefined;
+    promptToolCount = 0;
+    ctx.ui.setStatus("session-clock-prompt", promptStatus(ctx));
+  });
+
+  pi.on("tool_execution_start", (_event, ctx) => {
+    if (promptStartMs === undefined || promptSettledAt !== undefined) return;
+    promptToolCount++;
+    ctx.ui.setStatus("session-clock-prompt", promptStatus(ctx));
+  });
+
+  pi.on("agent_settled", (_event, ctx) => {
+    if (promptStartMs === undefined) return;
+    // Only freeze when truly idle. A continuation (triggerTurn:true custom message)
+    // keeps isIdle()==false and must keep the timer and counter live.
+    if (!ctx.isIdle()) return;
+    promptSettledAt = Date.now();
+    ctx.ui.setStatus("session-clock-prompt", promptStatus(ctx));
   });
 
   pi.on("session_shutdown", () => {

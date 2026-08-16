@@ -13,6 +13,7 @@ pi install git:github.com/vipentti/pi-session-clock
 - **Session duration** in the footer — elapsed time since session start. Auto-scales: `12s` → `3:42` → `1:02:33`.
 - **Wall clock** in the footer - configurable strftime format alongside the duration.
 - **Message times** in one footer status - `↑` for the last message you sent and `↓` for the last message received. Both arrows are always visible (`↑14:02  ↓14:05`), showing a dash placeholder (`↑--:--`) until each direction has its first message.
+- **Prompt timer** in the footer — agent-processing time from `before_agent_start` to the idle `agent_settled` (`⏱ 4s`) plus attempted tool calls (`🔧2`), shown as `⏱ 4s  🔧2`. Ticks live once per second while the agent is working and freezes at `agent_settled` (fully done, no retries or queued follow-ups) through idle until the next prompt. Submission/expansion/compaction latency before the agent loop is excluded; the duration reuses `durationStyle`. The tool count is attempted invocations between `before_agent_start` and the idle `agent_settled` counted via `tool_execution_start` (one per invocation including parallel batches, before any blocking; extensions that block later at `tool_call` cannot hide attempts). Hidden until the first prompt after session start, cleared on session boundary.
 
 ## Config
 
