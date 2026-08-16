@@ -25,16 +25,19 @@ export default function (pi: ExtensionAPI) {
   let lastReceivedAt: Date | undefined;
   let timer: ReturnType<typeof setInterval> | null = null;
 
-  // Per-prompt completion timer + tool-call counter (always-on, section 6).
-  // promptStartMs is the wall-time at before_agent_start; undefined when no prompt has run yet.
-  // promptToolCount counts attempted tool_call events between before_agent_start and agent_settled.
-  // promptTick repaints "⏱ <delta>  🔧<count>" once per second while a prompt is in flight.
-  // agent_settled freezes the value and clears the tick; idle keeps the frozen value.
+  // Per-prompt agent-processing timer + tool-call counter (always-on, section 6).
+  // Measures from before_agent_start to the idle agent_settled (submission/expansion/
+  // compaction before the loop is excluded). promptStartMs is wall-time at
+  // before_agent_start; undefined until the first prompt. promptSettledAt is the
+  // frozen wall-time at the idle agent_settled; undefined while the prompt is in
+  // flight (including continuations that keep isIdle()==false). promptToolCount
+  // counts tool_execution_start events between before_agent_start and the idle
+  // agent_settled so a blocking tool_call handler before us cannot hide attempts.
+  // The single session tick repaints the prompt band while active; execution and
+  // settle handlers repaint immediately.
   let promptStartMs: number | undefined;
   let promptSettledAt: number | undefined;
   let promptToolCount = 0;
-  let promptTick: ReturnType<typeof setInterval> | null = null;
-  let promptCtx: ExtensionContext | null = null;
 
   function promptStatus(ctx: ExtensionContext): string | undefined {
     if (promptStartMs === undefined) return undefined;
@@ -42,12 +45,6 @@ export default function (pi: ExtensionAPI) {
     const delta = end - promptStartMs;
     const elapsed = fmtDuration(delta, cfg.durationStyle);
     return ctx.ui.theme.fg("dim", `⏱ ${elapsed}  🔧${promptToolCount}`);
-  }
-
-  function tickPrompt() {
-    if (promptStartMs !== undefined && promptSettledAt === undefined && promptCtx !== null) {
-      promptCtx.ui.setStatus("session-clock-prompt", promptStatus(promptCtx));
-    }
   }
 
   // One merged status key: sent part first, then received part, so the order
@@ -74,6 +71,7 @@ export default function (pi: ExtensionAPI) {
     const clock = fmtTime(cfg.timeFormat, now);
     ctx.ui.setStatus("session-clock", ctx.ui.theme.fg("dim", `${duration}  ${clock}`));
     ctx.ui.setStatus("session-clock-messages", messagesStatus(ctx));
+    ctx.ui.setStatus("session-clock-prompt", promptStatus(ctx));
   }
 
   pi.on("session_start", (_event, ctx) => {
@@ -94,11 +92,6 @@ export default function (pi: ExtensionAPI) {
     promptStartMs = undefined;
     promptSettledAt = undefined;
     promptToolCount = 0;
-    if (promptTick !== null) {
-      clearInterval(promptTick);
-      promptTick = null;
-    }
-    promptCtx = null;
     ctx.ui.setStatus("session-clock-prompt", undefined);
   });
 
@@ -118,29 +111,21 @@ export default function (pi: ExtensionAPI) {
     promptStartMs = Date.now();
     promptSettledAt = undefined;
     promptToolCount = 0;
-    promptCtx = ctx;
-    if (promptTick !== null) clearInterval(promptTick);
-    ctx.ui.setStatus("session-clock-prompt", ctx.ui.theme.fg("dim", `⏱ ${fmtDuration(0, cfg.durationStyle)}  🔧0`));
-    promptTick = setInterval(tickPrompt, 1000);
+    ctx.ui.setStatus("session-clock-prompt", promptStatus(ctx));
   });
 
-  pi.on("tool_call", (_event, ctx) => {
-    if (promptStartMs === undefined || promptTick === null) return;
+  pi.on("tool_execution_start", (_event, ctx) => {
+    if (promptStartMs === undefined || promptSettledAt !== undefined) return;
     promptToolCount++;
-    // Reuse the latest ctx for subsequent ticks.
-    promptCtx = ctx;
     ctx.ui.setStatus("session-clock-prompt", promptStatus(ctx));
   });
 
   pi.on("agent_settled", (_event, ctx) => {
     if (promptStartMs === undefined) return;
-    if (promptTick !== null) {
-      clearInterval(promptTick);
-      promptTick = null;
-    }
-    // Freeze to settled wall-time; keep value visible through idle until next prompt.
+    // Only freeze when truly idle. A continuation (triggerTurn:true custom message)
+    // keeps isIdle()==false and must keep the timer and counter live.
+    if (!ctx.isIdle()) return;
     promptSettledAt = Date.now();
-    promptCtx = ctx;
     ctx.ui.setStatus("session-clock-prompt", promptStatus(ctx));
   });
 
@@ -149,10 +134,5 @@ export default function (pi: ExtensionAPI) {
       clearInterval(timer);
       timer = null;
     }
-    if (promptTick !== null) {
-      clearInterval(promptTick);
-      promptTick = null;
-    }
-    promptCtx = null;
   });
 }
