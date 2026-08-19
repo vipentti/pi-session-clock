@@ -30,7 +30,7 @@
     "extensions": [
       "./extensions"
     ],
-    "image": "./assets/demo.png"
+    "image": "https://raw.githubusercontent.com/vipentti/pi-session-clock/main/assets/demo.png"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
