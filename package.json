@@ -1,9 +1,11 @@
 {
   "name": "pi-session-clock",
   "type": "module",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Pi extension: session duration and configurable clock in the footer status bar",
-  "keywords": ["pi-package"],
+  "keywords": [
+    "pi-package"
+  ],
   "author": "Ville Penttinen",
   "license": "MIT",
   "repository": {
@@ -14,12 +16,20 @@
   "bugs": {
     "url": "https://github.com/vipentti/pi-session-clock/issues"
   },
-  "files": ["extensions", "src", "assets", "README.md", "LICENSE"],
+  "files": [
+    "extensions",
+    "src",
+    "assets",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=22.19.0"
   },
   "pi": {
-    "extensions": ["./extensions"],
+    "extensions": [
+      "./extensions"
+    ],
     "image": "./assets/demo.png"
   },
   "scripts": {
