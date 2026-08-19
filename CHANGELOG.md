@@ -6,6 +6,11 @@ Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- Removed version pin examples from installation instructions.
+- Use absolute demo image URLs in package metadata and README.
+
 ## [0.1.0] - 2026-08-19
 
 ### Added
