@@ -6,6 +6,8 @@ Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-08-19
+
 ### Changed
 
 - Removed version pin examples from installation instructions.
@@ -20,5 +22,6 @@ Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Live prompt duration and attempted tool call count.
 - Project, user, and environment configuration with defined precedence.
 
-[Unreleased]: https://github.com/vipentti/pi-session-clock/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/vipentti/pi-session-clock/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/vipentti/pi-session-clock/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/vipentti/pi-session-clock/compare/v0.0.0...v0.1.0
