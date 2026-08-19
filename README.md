@@ -6,9 +6,21 @@ Pi extension: session duration + configurable clock in the footer status bar.
 
 ## Install
 
+Install from npm:
+
+```bash
+pi install npm:pi-session-clock
+```
+
+Pin a published version with `pi install npm:pi-session-clock@1.0.0`.
+
+Alternatively, install directly from GitHub:
+
 ```bash
 pi install git:github.com/vipentti/pi-session-clock
 ```
+
+Pin a GitHub release with `pi install git:github.com/vipentti/pi-session-clock@v1.0.0`.
 
 ## What it does
 
