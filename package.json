@@ -25,7 +25,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
-    "release:verify": "npm run typecheck && npm test"
+    "check:package": "node scripts/check-package.mjs",
+    "release:verify": "npm run typecheck && npm test && npm run check:package"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
