@@ -1,25 +1,38 @@
 {
   "name": "pi-session-clock",
   "type": "module",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "Pi extension: session duration and configurable clock in the footer status bar",
   "keywords": ["pi-package"],
+  "author": "Ville Penttinen",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vipentti/pi-session-clock.git"
+  },
+  "homepage": "https://github.com/vipentti/pi-session-clock#readme",
+  "bugs": {
+    "url": "https://github.com/vipentti/pi-session-clock/issues"
+  },
+  "files": ["extensions", "src", "assets", "README.md", "LICENSE"],
+  "engines": {
+    "node": ">=22.19.0"
+  },
   "pi": {
     "extensions": ["./extensions"],
     "image": "./assets/demo.png"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "release:verify": "npm run typecheck && npm test"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "*"
+    "@earendil-works/pi-coding-agent": "*"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "*",
+    "@vipentti/npm-release-flow": "0.1.2",
     "tsx": "^4",
     "typescript": "^6"
   }

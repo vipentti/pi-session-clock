@@ -5,15 +5,50 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
 
 jobs:
   check:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: "22"
+          node-version: "22.19.0"
+          cache: npm
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - name: Validate package contents
+        run: |
+          npm pack --dry-run --json --ignore-scripts > pack.json
+          node --input-type=module <<'EOF'
+          import { readFileSync } from "node:fs";
+
+          const [{ files }] = JSON.parse(readFileSync("pack.json", "utf8"));
+          const paths = new Set(files.map(({ path }) => path));
+          const required = [
+            "package.json",
+            "README.md",
+            "LICENSE",
+            "assets/demo.png",
+            "extensions/index.ts",
+            "src/config.ts",
+            "src/format.ts",
+          ];
+
+          for (const path of required) {
+            if (!paths.has(path)) throw new Error(`Missing package file: ${path}`);
+          }
+
+          const forbidden = [...paths].filter(
+            (path) => path.startsWith("tests/") || path.startsWith(".github/workflows/"),
+          );
+          if (forbidden.length > 0) {
+            throw new Error(`Unexpected package files: ${forbidden.join(", ")}`);
+          }
+          EOF

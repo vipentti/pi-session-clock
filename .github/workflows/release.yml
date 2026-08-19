@@ -1,0 +1,25 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  release:
+    uses: vipentti/npm-release-flow/.github/workflows/release.yml@2ffb0fc02d7c977fe1dc89d3102fa8850030176e
+    permissions:
+      contents: write
+      pull-requests: read
+      id-token: write
+    secrets:
+      NPM_RELEASE_FLOW_GPG_PRIVATE_KEY: ${{ secrets.NPM_RELEASE_FLOW_GPG_PRIVATE_KEY }}
+      NPM_RELEASE_FLOW_GPG_PASSPHRASE: ${{ secrets.NPM_RELEASE_FLOW_GPG_PASSPHRASE }}
+      NPM_RELEASE_FLOW_GPG_PUBLIC_KEY: ${{ secrets.NPM_RELEASE_FLOW_GPG_PUBLIC_KEY }}
+      NPM_RELEASE_FLOW_APP_PRIVATE_KEY: ${{ secrets.NPM_RELEASE_FLOW_APP_PRIVATE_KEY }}
