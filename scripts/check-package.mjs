@@ -5,7 +5,13 @@ const output = execFileSync(
   ["pack", "--dry-run", "--json", "--ignore-scripts"],
   { encoding: "utf8" },
 );
-const [{ files }] = JSON.parse(output);
+const report = JSON.parse(output);
+const entries = Array.isArray(report) ? report : Object.values(report);
+if (entries.length !== 1 || !Array.isArray(entries[0]?.files)) {
+  throw new Error("Expected exactly one valid package report");
+}
+
+const [{ files }] = entries;
 const paths = new Set(files.map(({ path }) => path));
 const required = [
   "package.json",
