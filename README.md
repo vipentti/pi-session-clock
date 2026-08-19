@@ -2,6 +2,8 @@
 
 Pi extension: session duration + configurable clock in the footer status bar.
 
+![pi-session-clock in action](assets/demo.png)
+
 ## Install
 
 ```bash
